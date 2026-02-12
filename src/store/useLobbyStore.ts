@@ -22,10 +22,13 @@ export interface Notification {
     type: 'info' | 'success' | 'warning' | 'error';
 }
 
+export type GameType = 'XOX' | 'OKEY101';
+
 export interface Room {
     id: string;
     name: string;
     hostId: string;
+    gameType: GameType;
     players: Player[];
     spectators: Player[]; // New field
     status: 'waiting' | 'playing' | 'finished';
@@ -46,7 +49,7 @@ interface LobbyState {
 
     // Actions
     login: (name: string) => void;
-    createRoom: (roomName: string) => void;
+    createRoom: (roomName: string, gameType: GameType) => void;
     joinRoom: (roomId: string) => void;
     leaveRoom: () => void;
     makeMove: (index: number) => void;
@@ -81,8 +84,9 @@ export const useLobbyStore = create<LobbyState>()(
                 socket.emit('login', { name });
             },
 
-            createRoom: (roomName) => {
-                socket.emit('create_room', roomName);
+            createRoom: (roomName, gameType) => {
+                const fullName = `${roomName}|${gameType}`;
+                socket.emit('create_room', fullName);
             },
 
             joinRoom: (roomId) => {
@@ -164,13 +168,29 @@ if (typeof window !== 'undefined') {
         }
     });
 
-    socket.on('sync_rooms', (rooms: Room[]) => {
-        useLobbyStore.getState().setRooms(rooms);
+    socket.on('sync_rooms', (rooms: any[]) => {
+        const parsedRooms = rooms.map((room: any) => {
+            const parts = room.name.split('|');
+            let gameType: GameType = 'XOX';
+            let name = room.name;
+
+            if (parts.length > 1) {
+                const lastPart = parts[parts.length - 1];
+                if (lastPart === 'XOX' || lastPart === 'OKEY101') {
+                    gameType = lastPart as GameType;
+                    name = parts.slice(0, -1).join('|');
+                }
+            }
+
+            return { ...room, name, gameType };
+        });
+
+        useLobbyStore.getState().setRooms(parsedRooms);
 
         // Self-Healing: Reconnect to active room if needed
         const { currentUser, currentRoomId } = useLobbyStore.getState();
         if (currentUser && !currentRoomId) {
-            const myRoom = rooms.find(r => r.players.some(p => p.id === socket.id));
+            const myRoom = parsedRooms.find((r: Room) => r.players.some(p => p.id === socket.id));
             if (myRoom) {
                 useLobbyStore.getState().setCurrentRoomId(myRoom.id);
                 useLobbyStore.getState().addNotification('Reconnected to room', 'info');
@@ -178,19 +198,43 @@ if (typeof window !== 'undefined') {
         }
     });
 
-    socket.on('room_joined', (room: Room) => {
-        useLobbyStore.getState().setCurrentRoomId(room.id);
-        useLobbyStore.getState().addNotification(`Joined room: ${room.name}`, 'success');
+    socket.on('room_joined', (room: any) => {
+        // Parse single room
+        const parts = room.name.split('|');
+        let gameType: GameType = 'XOX';
+        let name = room.name;
+        if (parts.length > 1) {
+            const lastPart = parts[parts.length - 1];
+            if (lastPart === 'XOX' || lastPart === 'OKEY101') {
+                gameType = lastPart as GameType;
+                name = parts.slice(0, -1).join('|');
+            }
+        }
+        const parsedRoom = { ...room, name, gameType };
 
-        // Ensure local rooms list is also up to date immediately
+        useLobbyStore.getState().setCurrentRoomId(parsedRoom.id);
+        useLobbyStore.getState().addNotification(`Joined room: ${parsedRoom.name}`, 'success');
+
         useLobbyStore.setState((state) => ({
-            rooms: state.rooms.map(r => r.id === room.id ? room : r),
+            rooms: state.rooms.map(r => r.id === parsedRoom.id ? parsedRoom : r),
         }));
     });
 
-    socket.on('room_updated', (updatedRoom: Room) => {
+    socket.on('room_updated', (updatedRoom: any) => {
+        const parts = updatedRoom.name.split('|');
+        let gameType: GameType = 'XOX';
+        let name = updatedRoom.name;
+        if (parts.length > 1) {
+            const lastPart = parts[parts.length - 1];
+            if (lastPart === 'XOX' || lastPart === 'OKEY101') {
+                gameType = lastPart as GameType;
+                name = parts.slice(0, -1).join('|');
+            }
+        }
+        const parsedRoom = { ...updatedRoom, name, gameType };
+
         useLobbyStore.setState((state) => ({
-            rooms: state.rooms.map(r => r.id === updatedRoom.id ? updatedRoom : r),
+            rooms: state.rooms.map(r => r.id === parsedRoom.id ? parsedRoom : r),
         }));
     });
 

@@ -1,18 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLobbyStore } from '@/store/useLobbyStore';
 import { Button, Card } from '@/components/ui/core';
 import { User, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function LoginScreen() {
+    const router = useRouter();
     const { login } = useLobbyStore();
     const [username, setUsername] = useState('');
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
-        if (username.trim()) login(username);
+        if (username.trim()) {
+            login(username);
+            router.push('/lobbies');
+        }
     };
 
     return (
