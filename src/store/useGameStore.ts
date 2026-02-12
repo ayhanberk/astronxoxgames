@@ -1,87 +1,110 @@
 import { create } from 'zustand';
+import { useLobbyStore } from './useLobbyStore';
 
-export type Player = 'X' | 'O' | null;
-export type GameView = '2D' | '3D';
-export type Theme = 'light' | 'dark' | 'neon' | 'glass';
+type Player = 'X' | 'O' | null;
+export type Theme = 'light' | 'dark' | 'neon' | 'glass' | 'winter' | 'beach' | 'space' | 'cyberpunk' | 'candy';
+type GameView = '2D' | '3D';
 
 interface GameState {
   board: Player[];
-  xIsNext: boolean;
+  turn: Player;
   winner: Player | 'Draw' | null;
-  winningLine: number[] | null;
   view: GameView;
   theme: Theme;
   scores: { X: number; O: number };
+  pendingMove: number | null; // For move confirmation
 
   // Actions
   makeMove: (index: number) => void;
+  confirmMove: () => void;
+  setPendingMove: (index: number | null) => void;
   resetGame: () => void;
   toggleView: () => void;
   setTheme: (theme: Theme) => void;
 }
 
-const checkWinner = (squares: Player[]) => {
-  const lines = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
-    [0, 4, 8], [2, 4, 6]             // diagonals
-  ];
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i];
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return { winner: squares[a], line: lines[i] };
-    }
-  }
-  if (squares.every(s => s !== null)) return { winner: 'Draw' as const, line: null };
-  return null;
-};
-
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameState>((set, get) => ({
   board: Array(9).fill(null),
-  xIsNext: true,
+  turn: 'X',
   winner: null,
-  winningLine: null,
   view: '2D',
   theme: 'dark',
   scores: { X: 0, O: 0 },
+  pendingMove: null,
 
-  makeMove: (index) => set((state) => {
-    if (state.board[index] || state.winner) return state;
+  makeMove: (index) => {
+    // We now use setPendingMove for 3D confirmation, 
+    // but 2D might still want direct move. 
+    // For consistency, let's keep makeMove as the "execute" action.
+    useLobbyStore.getState().makeMove(index);
+    set({ pendingMove: null });
+  },
 
-    const newBoard = [...state.board];
-    newBoard[index] = state.xIsNext ? 'X' : 'O';
+  setPendingMove: (index) => set({ pendingMove: index }),
 
-    const result = checkWinner(newBoard);
-
-    if (result) {
-      const newScores = { ...state.scores };
-      if (result.winner === 'X') newScores.X += 1;
-      if (result.winner === 'O') newScores.O += 1;
-
-      return {
-        board: newBoard,
-        winner: result.winner,
-        winningLine: result.line,
-        scores: newScores,
-      };
+  confirmMove: () => {
+    const { pendingMove, makeMove } = get();
+    if (pendingMove !== null) {
+      makeMove(pendingMove);
     }
+  },
 
-    return {
-      board: newBoard,
-      xIsNext: !state.xIsNext,
-    };
-  }),
+  resetGame: () => {
+    useLobbyStore.getState().resetGame();
+  },
 
-  resetGame: () => set((state) => ({
-    board: Array(9).fill(null),
-    xIsNext: true,
-    winner: null,
-    winningLine: null,
-  })),
-
-  toggleView: () => set((state) => ({
-    view: state.view === '2D' ? '3D' : '2D'
-  })),
-
-  setTheme: (theme) => set({ theme }),
+  toggleView: () => set((state) => ({ view: state.view === '2D' ? '3D' : '2D' })),
+  setTheme: (theme) => {
+    // Delegate to LobbyStore for global sync
+    useLobbyStore.getState().setTheme(theme);
+    // Optimistic update
+    set({ theme });
+  },
 }));
+
+// Sync GameStore with LobbyStore
+useLobbyStore.subscribe((state) => {
+  const currentRoom = state.rooms.find(r => r.id === state.currentRoomId);
+  if (currentRoom) {
+    // Check if theme changed to avoid redundant sets, but ensuring reactive update
+    const nextTheme = (currentRoom.theme as Theme) || 'dark';
+
+    useGameStore.setState({
+      board: currentRoom.board as Player[],
+      turn: currentRoom.turn as Player,
+      theme: nextTheme,
+      winner: calculateWinner(currentRoom.board as Player[], currentRoom.status),
+      scores: {
+        X: currentRoom.players[0]?.score || 0,
+        O: currentRoom.players[1]?.score || 0
+      }
+    });
+  } else {
+    // Reset if no room
+    useGameStore.setState({
+      board: Array(9).fill(null),
+      turn: 'X',
+      winner: null,
+      scores: { X: 0, O: 0 }
+    });
+  }
+});
+
+function calculateWinner(board: Player[], status: string): Player | 'Draw' | null {
+  if (status !== 'finished') return null;
+
+  const lines = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const [a, b, c] = lines[i];
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return board[a];
+    }
+  }
+  if (!board.includes(null)) return 'Draw';
+  return null;
+}
+
