@@ -2,14 +2,16 @@
 
 import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, Text } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment, Text, Html } from '@react-three/drei';
 import { useOkeyStore } from '@/store/useOkeyStore';
 import { Rack3D } from './Rack3D';
 import { Tile3D } from './Tile3D';
+import { DraggableDrawPile } from './DraggableDrawPile';
 
 export function OkeyTable3D() {
     const { playersHands, centerPile, tiles: drawPile } = useOkeyStore();
     const myPlayerId = 'player1';
+    const [controlsEnabled, setControlsEnabled] = React.useState(true);
 
     return (
         <Canvas shadows className="w-full h-full" gl={{ preserveDrawingBuffer: true }}>
@@ -17,6 +19,7 @@ export function OkeyTable3D() {
                 {/* Camera: Slightly higher and back for better overview */}
                 <PerspectiveCamera makeDefault position={[0, 70, 50]} fov={45} />
                 <OrbitControls
+                    enabled={controlsEnabled}
                     target={[0, 0, 0]}
                     minPolarAngle={Math.PI / 8}
                     maxPolarAngle={Math.PI / 2.5}
@@ -90,26 +93,14 @@ export function OkeyTable3D() {
                 {/* --- CENTER AREA --- */}
                 <group position={[0, 0.2, 0]}>
                     {/* Draw Pile (Stack) */}
-                    {drawPile.length > 0 && (
-                        <group position={[-6, 0.5, 0]}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                drawPile.length > 0 && useOkeyStore.getState().drawTile(myPlayerId);
-                            }}
-                            onPointerOver={() => document.body.style.cursor = 'pointer'}
-                            onPointerOut={() => document.body.style.cursor = 'auto'}
-                        >
-                            {[...Array(Math.min(drawPile.length, 5))].map((_, i) => (
-                                <Tile3D
-                                    key={`draw-${i}`}
-                                    tile={{ id: 'draw', value: 0, color: null, type: 'regular' }}
-                                    position={[0, i * 0.45, 0]}
-                                    rotation={[-Math.PI / 2, 0, 0]}
-                                    isOpponent={true}
-                                />
-                            ))}
-                        </group>
-                    )}
+                    <DraggableDrawPile
+                        drawPileLength={drawPile.length}
+                        onClick={() => {
+                            if (drawPile.length > 0) useOkeyStore.getState().drawTile(myPlayerId);
+                        }}
+                        onDragStart={() => setControlsEnabled(false)}
+                        onDragEnd={() => setControlsEnabled(true)}
+                    />
 
                     {/* Discard Pile (Center) */}
                     <group position={[6, 0, 0]}>
@@ -131,6 +122,14 @@ export function OkeyTable3D() {
                     </group>
                 </group>
 
+                <Html position={[10, 5, 20]}>
+                    <button
+                        onClick={() => useOkeyStore.getState().initializeGame()}
+                        className="px-4 py-2 bg-red-600 text-white rounded shadow-lg hover:bg-red-700 font-bold"
+                    >
+                        Sıfırla
+                    </button>
+                </Html>
             </Suspense>
         </Canvas>
     );

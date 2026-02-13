@@ -8,15 +8,16 @@ interface Tile3DProps {
     tile: TileType;
     position?: [number, number, number];
     rotation?: [number, number, number];
+    scale?: number;
     isOpponent?: boolean;
     onClick?: () => void;
 }
 
-export function Tile3D({ tile, position = [0, 0, 0], rotation = [0, 0, 0], isOpponent = false, onClick }: Tile3DProps) {
+export function Tile3D({ tile, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1, isOpponent = false, onClick }: Tile3DProps) {
     // Tile dimensions
-    const width = 2.5;
-    const height = 3.5;
-    const depth = 0.4;
+    const width = 2.6;
+    const height = 3.6;
+    const depth = 0.5;
 
     // Colors mapping
     const colorMap: Record<string, string> = {
@@ -29,11 +30,15 @@ export function Tile3D({ tile, position = [0, 0, 0], rotation = [0, 0, 0], isOpp
     const displayColor = tile.color ? colorMap[tile.color] : '#10b981';
 
     return (
-        <group position={position} rotation={rotation} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-            {/* Main Tile Body */}
+        <group position={position} rotation={rotation} scale={[scale, scale, scale]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+            {/* Main Tile Body - Modern Minimalist: Slightly rounded edges */}
+            {/* Standard box geometry doesn't support radius, we can simulate or just use box for efficiency if 'drei' RoundedBox is heavy. 
+                For 106 tiles, standard box is safer for performance. Let's stick to standard box but maybe use a bevel if we really want premium? 
+                Actually, let's keep it simple standard box for performance but tweak material. 
+            */}
             <mesh castShadow receiveShadow>
                 <boxGeometry args={[width, height, depth]} />
-                <meshStandardMaterial color="#fdf6e3" roughness={0.3} metalness={0.1} />
+                <meshStandardMaterial color="#fdf6e3" roughness={0.2} metalness={0.05} />
             </mesh>
 
             {/* Front Face (Number & Color) */}
