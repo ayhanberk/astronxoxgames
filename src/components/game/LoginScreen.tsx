@@ -36,13 +36,17 @@ export function LoginScreen() {
             >
                 <Card className="glass-morphism border border-white/10 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
                     <div className="flex flex-col items-center text-center space-y-6">
-                        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-neon-cyan flex items-center justify-center shadow-lg shadow-primary/30 mb-2">
-                            <Sparkles size={40} className="text-white" />
+                        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-neon-cyan/20 flex items-center justify-center shadow-lg shadow-primary/30 mb-4 backdrop-blur-md border border-white/10">
+                            <img
+                                src="/transparant_icon.png"
+                                alt="AstronGames Logo"
+                                className="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                            />
                         </div>
 
                         <div className="space-y-2">
                             <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                                ASTRON XOX
+                                ASTRON GAMES
                             </h1>
                             <p className="text-sm font-medium text-foreground/50 uppercase tracking-widest">
                                 Premium Gaming

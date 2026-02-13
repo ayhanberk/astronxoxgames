@@ -11,8 +11,13 @@ export default function LobbiesPage() {
     const router = useRouter();
     const { currentUser } = useLobbyStore();
 
+    React.useEffect(() => {
+        if (!currentUser) {
+            router.push('/');
+        }
+    }, [currentUser, router]);
+
     if (!currentUser) {
-        router.push('/');
         return null;
     }
 

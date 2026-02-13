@@ -35,7 +35,7 @@ export function LobbyScreen() {
                 <div className="space-y-8">
                     <div>
                         <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                            <Gamepad2 className="text-primary" /> ASTRON
+                            <img src="/transparant_icon.png" alt="Logo" className="w-8 h-8 object-contain" /> ASTRON
                         </h2>
                         <p className="text-xs font-bold opacity-40 uppercase tracking-widest pl-9">Lobby v1.0</p>
                     </div>

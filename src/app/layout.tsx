@@ -14,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Astron XOX Games | Premium 3D Gaming",
+  title: "AstronGames | Premium 3D Gaming Platform",
   description: "Experience Tic-Tac-Toe like never before with premium 3D graphics and custom themes.",
+  icons: {
+    icon: '/transparant_icon.png',
+    shortcut: '/transparant_icon.png',
+    apple: '/transparant_icon.png',
+  },
 };
 
 export default function RootLayout({
